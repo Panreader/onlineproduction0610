@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>语音模仿实验</title>
+  <link href="jsPsych/dist/jspsych.css" rel="stylesheet" type="text/css">
+  <style>
+    body {
+      font-family: "Microsoft YaHei", "SimHei", sans-serif;
+      font-size: 20px;
+    }
+    .instruction {
+      max-width: 800px;
+      margin: 0 auto;
+      line-height: 1.8;
+      text-align: left;
+    }
+    .recording-indicator {
+      font-size: 24px;
+      color: #e74c3c;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    .volume-bar {
+      width: 300px;
+      height: 30px;
+      background: #eee;
+      border-radius: 15px;
+      margin: 20px auto;
+      overflow: hidden;
+    }
+    .volume-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #4CAF50, #FFC107, #f44336);
+      transition: width 0.1s;
+    }
+    .volume-label {
+      font-size: 16px;
+      color: #666;
+      margin-top: 10px;
+    }
+    .playback-section {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f9f9f9;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body></body>
+
+<script src="jsPsych/dist/jspsych.js"></script>
+<script src="jsPsych/dist/plugin-html-button-response.js"></script>
+<script src="jsPsych/dist/plugin-html-keyboard-response.js"></script>
+<script src="jsPsych/dist/plugin-html-audio-response.js"></script>
+<script src="jsPsych/dist/plugin-initialize-microphone.js"></script>
+<script src="jsPsych/dist/plugin-survey-text.js"></script>
+
+<script>
+// ==================== 配置区域 ====================
+
+let subject_id = '';
+
+// 生成音频文件列表
+const audio_files = [];
+for (let i = 1; i <= 11; i++) {
+  audio_files.push({
+    stimulus:  `audio/yi_T1T2_S${i}.wav`,
+    filename: `yi_T1T2_S${i}.wav`,
+    trial_num: i
+  });
+}
+
+const RECORD_DURATION = 3000; // 3秒
+
+// ==================== 保存数据函数 ====================
+
+function saveData() {
+  const data = jsPsych.data.get().json();
+  const blob = new Blob([data], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `subject_${subject_id}_data_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function downloadRecording(audioUrl, filename) {
+  fetch(audioUrl)
+    .then(response => response.blob())
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    })
+    .catch(err => console.error('下载录音失败:', err));
+}
+
+// ==================== 实验开始 ====================
+
+// 先初始化 jsPsych
+const jsPsych = initJsPsych({
+  on_finish: function() {
+    saveData();
+    alert('实验完成！\n\n1. 行为数据已自动下载（.json文件）\n2. 录音文件已逐个自动下载\n\n请将所有下载的文件保存好，发送给实验员。');
+  }
+});
+
+// 随机打乱音频顺序（必须在 initJsPsych 之后）
+const shuffled_audio = jsPsych.randomization.shuffle(audio_files);
+
+const timeline = [];
+
+// ---------- 1. 欢迎页 ----------
+timeline.push({
+  type: jsPsychHtmlButtonResponse,
+  stimulus: `
+    <div class="instruction">
+      <h2>欢迎参加语音模仿实验</h2>
+      <p>在本实验中，您将听到一些音频，请在每个音频播放结束后，尽可能准确地模仿发音。</p>
+      <p><strong>实验流程：</strong></p>
+      <ol>
+        <li>点击"开始实验"后，请先允许浏览器使用麦克风</li>
+        <li>每个试次：先听音频 → 看到"请模仿"提示后，立即模仿发音</li>
+        <li>录音时长为 3 秒，请尽量在提示期间完成模仿</li>
+        <li>共 11 个音频，全程约 5-8 分钟</li>
+      </ol>
+      <p><strong>注意事项：</strong></p>
+      <ul>
+        <li>请在安静环境中进行实验</li>
+        <li>使用耳机或保持环境安静，以便听清音频</li>
+        <li>请对着麦克风清晰发音</li>
+        <li>实验过程中请勿刷新页面</li>
+        <li><strong>重要：每个录音结束后会自动下载文件，请允许浏览器下载，不要关闭下载提示</strong></li>
+      </ul>
+    </div>
+  `,
+  choices: ['开始实验'],
+  button_html: function(choice, choiceIndex) {
+    return '<button class="jspsych-btn" style="font-size:18px;padding:12px 24px;">' + choice + '</button>';
+  }
+});
+
+// ---------- 2. 输入被试编号 ----------
+timeline.push({
+  type: jsPsychSurveyText,
+  questions: [
+    {
+      prompt: '请输入您的被试编号（如：001）：',
+      name: 'subject_id',
+      required: true,
+      placeholder: '001'
+    }
+  ],
+  on_finish: function(data) {
+    subject_id = data.response.subject_id;
+    jsPsych.data.addProperties({subject_id: subject_id});
+  }
+});
+
+// ---------- 3. 初始化麦克风 ----------
+timeline.push({
+  type: jsPsychInitializeMicrophone,
+  device_select_message: '请选择您的麦克风设备，然后点击继续。',
+  button_label: '继续'
+});
+
+// ---------- 4. 练习试次 ----------
+timeline.push({
+  type: jsPsychHtmlButtonResponse,
+  stimulus: `
+    <div class="instruction">
+      <h3>练习试次</h3>
+      <p>接下来是一个练习，让您熟悉流程。</p>
+      <p>点击"开始练习"后：</p>
+      <ol>
+        <li>先听音频</li>
+        <li>听到提示后，屏幕显示<span style="color:#e74c3c;font-weight:bold;">"请模仿"</span></li>
+        <li>立即开始模仿发音，持续 3 秒</li>
+        <li>录音会自动下载到您的电脑</li>
+      </ol>
+    </div>
+  `,
+  choices: ['开始练习'],
+  button_html: function(choice, choiceIndex) {
+    return '<button class="jspsych-btn" style="font-size:18px;padding:12px 24px;">' + choice + '</button>';
+  }
+});
+
+// 练习：播放音频（使用HTML嵌入）
+timeline.push({
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: `
+    <div style="text-align:center;">
+      <p style="font-size:24px;">🔊 请仔细听...</p>
+      <audio id="practice-audio" src="${audio_files[0].stimulus}" autoplay></audio>
+    </div>
+  `,
+  choices: "NO_KEYS",
+  trial_duration: function() {
+    const audio = document.getElementById('practice-audio');
+    return audio && audio.duration ? audio.duration * 1000 + 500 : 3500;
+  },
+  post_trial_gap: 500
+});
+
+// 练习：提示模仿
+timeline.push({
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: '<p style="font-size:36px;color:#e74c3c;">🔔 请模仿</p>',
+  choices: "NO_KEYS",
+  trial_duration: 500,
+  post_trial_gap: 0
+});
+
+// 练习：录音
+timeline.push({
+  type: jsPsychHtmlAudioResponse,
+  stimulus: `
+    <div style="text-align:center;">
+      <p class="recording-indicator">🔴 录音中，3秒内完成</p>
+      <div class="volume-bar"><div class="volume-fill" id="volume-fill-practice"></div></div>
+      <p class="volume-label">音量指示器（有波动说明麦克风正常工作）</p>
+      <p style="font-size:14px;color:#999;">如果音量条不动，请检查麦克风权限</p>
+    </div>
+  `,
+  recording_duration: RECORD_DURATION,
+  show_done_button: false,
+  allow_playback: true,
+  save_audio_url: true,
+  on_start: function() {
+    console.log('练习录音开始，尝试访问麦克风...');
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        console.log('麦克风权限获取成功');
+        window.practiceStream = stream;
+
+        let recorder = new MediaRecorder(stream);
+        let chunks = [];
+        recorder.ondataavailable = e => {
+          if (e.data.size > 0) chunks.push(e.data.size);
+          console.log('收到音频数据块，大小:', e.data.size);
+        };
+        recorder.onstop = () => {
+          console.log('录音停止，总数据块:', chunks.length, '大小:', chunks);
+        };
+        recorder.start(100);
+        window.practiceRecorder = recorder;
+
+        let audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let analyser = audioContext.createAnalyser();
+        let source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        analyser.fftSize = 64;
+        let dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        function checkVolume() {
+          analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+          let avg = sum / dataArray.length;
+          let fill = document.getElementById('volume-fill-practice');
+          if (fill) fill.style.width = Math.min(100, avg * 2) + '%';
+          console.log('音量平均值:', avg.toFixed(2));
+          if (window.isRecordingPractice) requestAnimationFrame(checkVolume);
+        }
+        window.isRecordingPractice = true;
+        checkVolume();
+      })
+      .catch(err => {
+        console.error('麦克风访问失败:', err.name, err.message);
+        alert('麦克风访问失败: ' + err.message + '\n请检查浏览器权限设置');
+      });
+  },
+  on_finish: function(data) {
+    window.isRecordingPractice = false;
+    if (window.practiceRecorder) window.practiceRecorder.stop();
+    if (window.practiceStream) window.practiceStream.getTracks().forEach(t => t.stop());
+
+    data.subject_id = subject_id;
+    data.trial_type_label = 'practice';
+    data.audio_filename = 'practice_' + audio_files[0].filename;
+
+    console.log('练习录音完成:', {
+      audio_url: data.audio_url ? '存在' : '不存在',
+      response_length: data.response ? data.response.length : 0,
+      duration: data.rt
+    });
+
+    if (data.audio_url) {
+      const recordingFilename = `${subject_id}_practice_${audio_files[0].filename.replace('.wav', '')}_recording.webm`;
+      downloadRecording(data.audio_url, recordingFilename);
+    }
+  }
+});
+
+// 练习结束提示
+timeline.push({
+  type: jsPsychHtmlButtonResponse,
+  stimulus: `
+    <div class="instruction">
+      <p>练习结束！正式实验的流程与练习相同。</p>
+      <p>点击"开始正式实验"进入正式试次。</p>
+    </div>
+  `,
+  choices: ['开始正式实验'],
+  button_html: function(choice, choiceIndex) {
+    return '<button class="jspsych-btn" style="font-size:18px;padding:12px 24px;">' + choice + '</button>';
+  }
+});
+
+// ---------- 5. 正式实验试次（随机顺序） ----------
+shuffled_audio.forEach((audio, index) => {
+  
+  // 试次编号提示
+  timeline.push({
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `<p style="font-size:28px;">第 ${index + 1} / 11 个音频</p>`,
+    choices: "NO_KEYS",
+    trial_duration: 1000,
+    post_trial_gap: 500
+  });
+  
+  // 播放音频（使用HTML嵌入，随机顺序）
+  timeline.push({
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+      <div style="text-align:center;">
+        <p style="font-size:24px;">🔊 请仔细听...</p>
+        <audio id="formal-audio-${index}" src="${audio.stimulus}" autoplay></audio>
+      </div>
+    `,
+    choices: "NO_KEYS",
+    trial_duration: function() {
+      const audio = document.getElementById(`formal-audio-${index}`);
+      return audio && audio.duration ? audio.duration * 1000 + 500 : 3500;
+    },
+    post_trial_gap: 500
+  });
+  
+  // 提示模仿
+  timeline.push({
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<p style="font-size:36px;color:#e74c3c;">🔔 请模仿</p>',
+    choices: "NO_KEYS",
+    trial_duration: 500,
+    post_trial_gap: 0
+  });
+  
+  // 录音
+  timeline.push({
+    type: jsPsychHtmlAudioResponse,
+    stimulus: `
+      <div style="text-align:center;">
+        <p class="recording-indicator">🔴 录音中，3秒内完成</p>
+        <p style="font-size:18px;color:#666;">剩余时间：<span id="countdown-${index}">3</span> 秒</p>
+      </div>
+    `,
+    recording_duration: RECORD_DURATION,
+    show_done_button: false,
+    allow_playback: false,
+    save_audio_url: true,
+    on_load: function() {
+      let timeLeft = 3;
+      const countdownEl = document.getElementById(`countdown-${index}`);
+      const timer = setInterval(() => {
+        timeLeft--;
+        if (countdownEl) countdownEl.textContent = timeLeft;
+        if (timeLeft <= 0) clearInterval(timer);
+      }, 1000);
+    },
+    on_finish: function(data) {
+      data.subject_id = subject_id;
+      data.trial_num = audio.trial_num;
+      data.audio_filename = audio.filename;
+      data.trial_type_label = 'formal';
+      
+      if (data.audio_url) {
+        const recordingFilename = `${subject_id}_trial${audio.trial_num}_${audio.filename.replace('.wav', '')}_recording.webm`;
+        downloadRecording(data.audio_url, recordingFilename);
+      }
+    }
+  });
+  
+  // 试次间休息
+  if (index < shuffled_audio.length - 1) {
+    timeline.push({
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: '<p style="font-size:20px;color:#666;">休息一下，准备下一个...</p>',
+      choices: "NO_KEYS",
+      trial_duration: 1500,
+      post_trial_gap: 500
+    });
+  }
+});
+
+// ---------- 6. 实验结束 ----------
+timeline.push({
+  type: jsPsychHtmlButtonResponse,
+  stimulus: `
+    <div class="instruction">
+      <h2>实验结束，感谢您的参与！</h2>
+      <p>所有数据已自动下载到您的电脑。</p>
+      <p><strong>请检查下载文件夹，确认以下文件都已保存：</strong></p>
+      <ul>
+        <li>1 个 .json 文件（行为数据）</li>
+        <li>12 个 .webm 文件（11个正式录音 + 1个练习录音）</li>
+      </ul>
+      <p>请将所有文件打包发送给实验员。</p>
+    </div>
+  `,
+  choices: ['结束实验'],
+  button_html: function(choice, choiceIndex) {
+    return '<button class="jspsych-btn" style="font-size:18px;padding:12px 24px;">' + choice + '</button>';
+  },
+  on_finish: function() {
+    saveData();
+  }
+});
+
+// ==================== 启动实验 ====================
+
+jsPsych.run(timeline);
+
+</script>
+</html>
