@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 <!DOCTYPE html>
 <html>
 <head>
@@ -744,4 +745,752 @@ timeline.push({
 jsPsych.run(timeline);
 
 </script>
+=======
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>语音模仿实验</title>
+  <link href="jsPsych/dist/jspsych.css" rel="stylesheet" type="text/css">
+  <style>
+    body {
+      font-family: "Microsoft YaHei", "SimHei", sans-serif;
+      font-size: 20px;
+    }
+    .instruction {
+      max-width: 800px;
+      margin: 0 auto;
+      line-height: 1.8;
+      text-align: left;
+    }
+    .recording-indicator {
+      font-size: 24px;
+      color: #e74c3c;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    .volume-bar {
+      width: 300px;
+      height: 30px;
+      background: #eee;
+      border-radius: 15px;
+      margin: 20px auto;
+      overflow: hidden;
+    }
+    .volume-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #4CAF50, #FFC107, #f44336);
+      transition: width 0.1s;
+    }
+    .volume-label {
+      font-size: 16px;
+      color: #666;
+      margin-top: 10px;
+    }
+    .playback-section {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f9f9f9;
+      border-radius: 8px;
+    }
+    /* 固定布局 - 确保页面切换时元素位置绝对不变 */
+    .reading-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 60px;
+      min-height: 500px;
+      text-align: center;
+    }
+    /* 顶部提示文字 - 固定位置 */
+    .reading-wrapper .top-hint {
+      font-size: 22px;
+      color: #555;
+      height: 35px;
+      line-height: 35px;
+      margin-bottom: 30px;
+    }
+    /* 汉字显示区域 - 绝对固定 */
+    .reading-wrapper .char-box {
+      font-size: 120px;
+      font-weight: bold;
+      color: #333;
+      height: 150px;
+      line-height: 150px;
+      margin: 0;
+    }
+    /* 拼音显示区域 - 绝对固定 */
+    .reading-wrapper .pinyin-box {
+      font-size: 36px;
+      color: #666;
+      height: 55px;
+      line-height: 55px;
+      margin: 10px 0 30px 0;
+    }
+    /* 状态文字区域 - 绝对固定 */
+    .reading-wrapper .status-box {
+      font-size: 20px;
+      height: 35px;
+      line-height: 35px;
+      margin-bottom: 25px;
+    }
+    /* 按钮区域 - 绝对固定 */
+    .reading-wrapper .button-box {
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* 统一按钮样式 */
+    .uniform-btn {
+      font-size: 20px;
+      padding: 0;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 200px;
+      height: 56px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-red {
+      background: #e74c3c;
+      color: white;
+    }
+    .btn-red:hover {
+      background: #c0392b;
+    }
+    .btn-green {
+      background: #4CAF50;
+      color: white;
+    }
+    .btn-green:hover {
+      background: #388E3C;
+    }
+    .btn-blue {
+      background: #3498db;
+      color: white;
+    }
+    .btn-blue:hover {
+      background: #2980b9;
+    }
+    .char-table {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      max-width: 600px;
+      margin: 30px auto;
+    }
+    .char-table-item {
+      text-align: center;
+      padding: 15px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    .char-table-item .char {
+      font-size: 48px;
+      font-weight: bold;
+    }
+    .char-table-item .pinyin {
+      font-size: 20px;
+      color: #666;
+      margin-top: 8px;
+    }
+    .fixation-cross {
+      font-size: 60px;
+      color: #333;
+      font-weight: bold;
+    }
+    /* 覆盖 jsPsych 默认按钮样式 */
+    .jspsych-btn {
+      font-size: 20px;
+      padding: 0;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 200px;
+      height: 56px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* 覆盖 jsPsych done button 样式 */
+    .jspsych-audio-response-container .jspsych-btn {
+      width: 200px;
+      height: 56px;
+      font-size: 20px;
+    }
+    /* 覆盖 survey-text 按钮 */
+    .jspsych-survey-text-btn {
+      font-size: 20px;
+      padding: 0;
+      width: 200px;
+      height: 56px;
+    }
+  /* 覆盖 html-audio-response 的 done 按钮样式 */
+  .jspsych-audio-response-done-btn,
+  #jspsych-audio-response-done-btn,
+  button[class*="audio-response"],
+  .jspsych-content button {
+    font-size: 20px !important;
+    padding: 10px 20px !important;
+    border: none !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    width: 200px !important;
+    height: 56px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #4CAF50 !important;
+    color: white !important;
+    font-family: "Microsoft YaHei", "SimHei", sans-serif !important;
+  }
+  .jspsych-audio-response-done-btn:hover,
+  #jspsych-audio-response-done-btn:hover,
+  button[class*="audio-response"]:hover,
+  .jspsych-content button:hover {
+    background: #388E3C !important;
+  }
+  </style>
+<base target="_blank">
+<base target="_blank">
+</head>
+<body></body>
+
+<script src="jsPsych/dist/jspsych.js"></script>
+<script src="jsPsych/dist/plugin-html-button-response.js"></script>
+<script src="jsPsych/dist/plugin-html-keyboard-response.js"></script>
+<script src="jsPsych/dist/plugin-html-audio-response.js"></script>
+<script src="jsPsych/dist/plugin-initialize-microphone.js"></script>
+<script src="jsPsych/dist/plugin-survey-text.js"></script>
+
+<script>
+// ==================== 配置区域 ====================
+
+let subject_id = '';
+
+// ========== 朗读任务配置 ==========
+const reading_chars = [
+  { char: '八', pinyin: 'bā' },
+  { char: '拔', pinyin: 'bá' },
+  { char: '把', pinyin: 'bǎ' },
+  { char: '爸', pinyin: 'bà' },
+  { char: '搭', pinyin: 'dā' },
+  { char: '达', pinyin: 'dá' },
+  { char: '打', pinyin: 'dǎ' },
+  { char: '大', pinyin: 'dà' }
+];
+
+const READING_REPETITIONS = 8;
+const READING_ISI = 500;
+
+// ========== 模仿任务配置 ==========
+const t1t2_files = [];
+for (let i = 1; i <= 11; i++) {
+  t1t2_files.push({
+    stimulus: `audio/yi_T1T2_S${i}.wav`,
+    filename: `yi_T1T2_S${i}.wav`,
+    stimulus_num: i,
+    continuum_type: 'T1T2'
+  });
+}
+
+const t2t4_files = [];
+for (let i = 1; i <= 11; i++) {
+  t2t4_files.push({
+    stimulus: `audio/yi_T2T4_S${i}.wav`,
+    filename: `yi_T2T4_S${i}.wav`,
+    stimulus_num: i,
+    continuum_type: 'T2T4'
+  });
+}
+
+const IMITATION_REPETITIONS = 3;
+const IMITATION_RECORD_DURATION = 3000;
+const IMITATION_ISI = 500;
+
+// ==================== 保存数据函数 ====================
+
+function saveData() {
+  const data = jsPsych.data.get().json();
+  const blob = new Blob([data], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `subject_${subject_id}_data_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function downloadRecording(audioUrl, filename) {
+  fetch(audioUrl)
+    .then(response => response.blob())
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    })
+    .catch(err => console.error('下载录音失败:', err));
+}
+
+// ==================== 辅助函数：生成朗读任务试次 ====================
+function generateReadingTrials() {
+  const trials = [];
+
+  let all_reading_trials = [];
+  for (let r = 0; r < READING_REPETITIONS; r++) {
+    reading_chars.forEach((item, charIdx) => {
+      all_reading_trials.push({
+        char: item.char,
+        pinyin: item.pinyin,
+        char_index: charIdx + 1,
+        repetition: r + 1
+      });
+    });
+  }
+
+  all_reading_trials = jsPsych.randomization.shuffle(all_reading_trials);
+
+  function hasConsecutiveSame(arr) {
+    for (let i = 1; i < arr.length; i++) {
+      if (arr[i].char === arr[i-1].char) return true;
+    }
+    return false;
+  }
+
+  let attempts = 0;
+  while (hasConsecutiveSame(all_reading_trials) && attempts < 100) {
+    all_reading_trials = jsPsych.randomization.shuffle(all_reading_trials);
+    attempts++;
+  }
+
+  all_reading_trials.forEach((trial, index) => {
+    // 阶段1：显示汉字，被试点击"开始录音"
+    trials.push({
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
+        <div class="reading-wrapper">
+          <div class="top-hint">请朗读以下汉字</div>
+          <div class="char-box">${trial.char}</div>
+          <div class="pinyin-box">${trial.pinyin}</div>
+          <div class="status-box" style="color:#999;">准备好后点击按钮开始录音</div>
+        </div>
+      `,
+      choices: ['开始录音'],
+      button_html: '<button class="jspsych-btn btn-red">%choice%</button>'
+    });
+
+    // 阶段2：录音中，显示"下一个"按钮，5秒后自动跳转
+    trials.push({
+      type: jsPsychHtmlAudioResponse,
+      stimulus: `
+        <div class="reading-wrapper">
+          <div class="top-hint">请朗读以下汉字</div>
+          <div class="char-box">${trial.char}</div>
+          <div class="pinyin-box">${trial.pinyin}</div>
+          <div class="status-box recording-indicator">🔴 录音中</div>
+          <div style="font-size:16px;color:#999;margin-top:10px;">请在3秒内完成录音</div>
+        </div>
+      `,
+      recording_duration: 5000,
+      show_done_button: true,
+      done_button_label: '下一个',
+      allow_playback: false,
+      save_audio_url: true,
+      on_finish: function(data) {
+        data.subject_id = subject_id;
+        data.task_type = 'reading';
+        data.char = trial.char;
+        data.pinyin = trial.pinyin;
+        data.char_index = trial.char_index;
+        data.repetition = trial.repetition;
+        data.trial_num = index + 1;
+
+        if (data.audio_url) {
+          const recordingFilename = `${subject_id}_reading_${trial.char}_${trial.pinyin}_rep${trial.repetition}_trial${index+1}_recording.webm`;
+          downloadRecording(data.audio_url, recordingFilename);
+        }
+      }
+    });
+  });
+
+  return trials;
+}
+
+// ==================== 辅助函数：生成模仿任务试次 ====================
+function generateImitationTrials() {
+  const trials = [];
+
+  let t1t2_trials = [];
+  for (let r = 0; r < IMITATION_REPETITIONS; r++) {
+    t1t2_files.forEach((audio) => {
+      t1t2_trials.push({ ...audio, repetition: r + 1 });
+    });
+  }
+  t1t2_trials = jsPsych.randomization.shuffle(t1t2_trials);
+
+  let t2t4_trials = [];
+  for (let r = 0; r < IMITATION_REPETITIONS; r++) {
+    t2t4_files.forEach((audio) => {
+      t2t4_trials.push({ ...audio, repetition: r + 1 });
+    });
+  }
+  t2t4_trials = jsPsych.randomization.shuffle(t2t4_trials);
+
+  let all_imitation_trials = t1t2_trials.concat(t2t4_trials);
+
+  all_imitation_trials.forEach((audio, index) => {
+    // 步骤1："请仔细听" + 播放音频（同时显示）
+    trials.push({
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: `
+        <div style="text-align:center;">
+          <p style="font-size:24px;">🔊 请仔细听</p>
+          <audio id="imitation-audio-${index}" src="${audio.stimulus}" autoplay></audio>
+        </div>
+      `,
+      choices: "NO_KEYS",
+      trial_duration: function() {
+        const audioEl = document.getElementById(`imitation-audio-${index}`);
+        return audioEl && audioEl.duration ? audioEl.duration * 1000 + 200 : 2200;
+      },
+      post_trial_gap: 0
+    });
+
+    // 步骤2："请模仿" + 录音，显示"下一个"按钮，3秒后自动跳转
+    trials.push({
+      type: jsPsychHtmlAudioResponse,
+      stimulus: `
+        <div style="text-align:center;">
+          <p style="font-size:36px;color:#e74c3c;">🔔 请模仿，录音中</p>
+          <p style="font-size:18px;color:#666;margin-top:20px;">录音将在3秒后自动结束</p>
+        </div>
+      `,
+      recording_duration: IMITATION_RECORD_DURATION,
+      show_done_button: true,
+      done_button_label: '下一个',
+      allow_playback: false,
+      save_audio_url: true,
+      on_finish: function(data) {
+        data.subject_id = subject_id;
+        data.task_type = 'imitation';
+        data.continuum_type = audio.continuum_type;
+        data.stimulus_num = audio.stimulus_num;
+        data.audio_filename = audio.filename;
+        data.repetition = audio.repetition;
+        data.trial_num = index + 1;
+
+        if (data.audio_url) {
+          const recordingFilename = `${subject_id}_imitation_${audio.continuumType}_S${audio.stimulus_num}_rep${audio.repetition}_trial${index+1}_recording.webm`;
+          downloadRecording(data.audio_url, recordingFilename);
+        }
+      }
+    });
+
+    // 步骤3：十字注视点（ISI），所有试次后都有（包括最后一个）
+    trials.push({
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: '<p class="fixation-cross">+</p>',
+      choices: "NO_KEYS",
+      trial_duration: IMITATION_ISI,
+      post_trial_gap: 0
+    });
+  });
+
+  return trials;
+}
+
+// ==================== 实验开始 ====================
+
+const jsPsych = initJsPsych({
+  on_finish: function() {
+    saveData();
+    alert('实验完成！\n\n1. 行为数据已自动下载（.json文件）\n2. 录音文件已逐个自动下载\n\n请将所有下载的文件保存好，发送给实验员。');
+  }
+});
+
+const timeline = [];
+
+// ---------- 1. 欢迎页 ----------
+timeline.push({
+  type: jsPsychHtmlButtonResponse,
+  stimulus: `
+    <div class="instruction">
+      <h2>欢迎参加语音实验</h2>
+      <p>本实验包含朗读任务和模仿任务。</p>
+      <p><strong>朗读：</strong>看到汉字后朗读并录音。</p>
+      <p><strong>模仿：</strong>听音频后模仿发音。</p>
+      <p>全程约10分钟，请勿刷新页面。</p>
+      <p><strong>请允许浏览器下载录音文件。</strong></p>
+    </div>
+  `,
+  choices: ['开始实验'],
+  button_html: '<button class="jspsych-btn btn-blue">%choice%</button>'
+});
+
+// ---------- 2. 输入被试编号 ----------
+timeline.push({
+  type: jsPsychSurveyText,
+  questions: [
+    {
+      prompt: '请输入您的被试编号（如：001）：',
+      name: 'subject_id',
+      required: true,
+      placeholder: '001'
+    }
+  ],
+  button_label: '继续',
+  on_finish: function(data) {
+    subject_id = data.response.subject_id;
+    jsPsych.data.addProperties({subject_id: subject_id});
+  }
+});
+
+// ---------- 3. 初始化麦克风 ----------
+timeline.push({
+  type: jsPsychInitializeMicrophone,
+  device_select_message: '请选择您的麦克风设备，然后点击继续。',
+  button_label: '继续'
+});
+
+// ---------- 4. 练习试次说明 ----------
+timeline.push({
+  type: jsPsychHtmlButtonResponse,
+  stimulus: `
+    <div class="instruction">
+      <h3>练习试次</h3>
+      <p>接下来是一个练习，让您熟悉模仿任务的流程。</p>
+      <p>点击"开始练习"后：</p>
+      <p>先听音频，然后立即开始模仿发音，持续 3 秒</p>
+      <p>录音会自动下载到您的电脑</p>
+    </div>
+  `,
+  choices: ['开始练习'],
+  button_html: '<button class="jspsych-btn btn-blue">%choice%</button>'
+});
+
+// 练习：播放音频
+timeline.push({
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: `
+    <div style="text-align:center;">
+      <p style="font-size:24px;">🔊 请仔细听</p>
+      <audio id="practice-audio" src="${t1t2_files[0].stimulus}" autoplay></audio>
+    </div>
+  `,
+  choices: "NO_KEYS",
+  trial_duration: function() {
+    const audio = document.getElementById('practice-audio');
+    return audio && audio.duration ? audio.duration * 1000 + 500 : 2500;
+  },
+  post_trial_gap: 0
+});
+
+// 练习：录音（带回放，按钮改为中文）
+timeline.push({
+  type: jsPsychHtmlAudioResponse,
+  stimulus: `
+    <div style="text-align:center;">
+      <p style="font-size:36px;color:#e74c3c;">🔔 请模仿，录音中</p>
+      <p style="font-size:18px;color:#666;margin-top:20px;">录音将在3秒后自动结束</p>
+      <div class="volume-bar"><div class="volume-fill" id="volume-fill-practice"></div></div>
+      <p class="volume-label">音量指示器（有波动说明麦克风正常工作）</p>
+      <p style="font-size:14px;color:#999;">如果音量条不动，请检查麦克风权限</p>
+    </div>
+  `,
+  recording_duration: 3000,
+  show_done_button: false,
+  allow_playback: true,
+  record_again_button_label: '重新录音',
+  accept_button_label: '继续',
+  save_audio_url: true,
+  on_start: function() {
+    console.log('练习录音开始，尝试访问麦克风...');
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        console.log('麦克风权限获取成功');
+        window.practiceStream = stream;
+
+        let recorder = new MediaRecorder(stream);
+        let chunks = [];
+        recorder.ondataavailable = e => {
+          if (e.data.size > 0) chunks.push(e.data.size);
+          console.log('收到音频数据块，大小:', e.data.size);
+        };
+        recorder.onstop = () => {
+          console.log('录音停止，总数据块:', chunks.length, '大小:', chunks);
+        };
+        recorder.start(100);
+        window.practiceRecorder = recorder;
+
+        let audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let analyser = audioContext.createAnalyser();
+        let source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        analyser.fftSize = 64;
+        let dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        function checkVolume() {
+          analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+          let avg = sum / dataArray.length;
+          let fill = document.getElementById('volume-fill-practice');
+          if (fill) fill.style.width = Math.min(100, avg * 2) + '%';
+          console.log('音量平均值:', avg.toFixed(2));
+          if (window.isRecordingPractice) requestAnimationFrame(checkVolume);
+        }
+        window.isRecordingPractice = true;
+        checkVolume();
+      })
+      .catch(err => {
+        console.error('麦克风访问失败:', err.name, err.message);
+        alert('麦克风访问失败: ' + err.message + '\n请检查浏览器权限设置');
+      });
+  },
+  on_finish: function(data) {
+    window.isRecordingPractice = false;
+    if (window.practiceRecorder) window.practiceRecorder.stop();
+    if (window.practiceStream) window.practiceStream.getTracks().forEach(t => t.stop());
+
+    data.subject_id = subject_id;
+    data.task_type = 'practice';
+    data.trial_type_label = 'practice';
+    data.audio_filename = 'practice_' + t1t2_files[0].filename;
+
+    console.log('练习录音完成:', {
+      audio_url: data.audio_url ? '存在' : '不存在',
+      response_length: data.response ? data.response.length : 0,
+      duration: data.rt
+    });
+
+    if (data.audio_url) {
+      const recordingFilename = `${subject_id}_practice_${t1t2_files[0].filename.replace('.wav', '')}_recording.webm`;
+      downloadRecording(data.audio_url, recordingFilename);
+    }
+  }
+});
+
+// 练习结束 → 正式实验过渡
+timeline.push({
+  type: jsPsychHtmlButtonResponse,
+  stimulus: `
+    <div class="instruction">
+      <p>练习结束！正式实验的流程与练习相同。</p>
+      <p>实验分为两个部分：</p>
+      <ol>
+        <li><strong>朗读任务</strong>：看到汉字后朗读并录音（读一遍）。</li>
+        <li><strong>模仿任务</strong></li>
+      </ol>
+      <p>点击"开始正式实验"进入朗读任务。</p>
+    </div>
+  `,
+  choices: ['开始正式实验'],
+  button_html: '<button class="jspsych-btn btn-blue">%choice%</button>'
+});
+
+// ---------- 5. 朗读任务 - 字表熟悉 ----------
+let charTableHtml = '<div class="char-table">';
+reading_chars.forEach(item => {
+  charTableHtml += `
+    <div class="char-table-item">
+      <div class="char">${item.char}</div>
+      <div class="pinyin">${item.pinyin}</div>
+    </div>
+  `;
+});
+charTableHtml += '</div>';
+
+timeline.push({
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: `
+    <div class="instruction" style="text-align:center;">
+      <h3>朗读任务 - 字表熟悉</h3>
+      <p>请熟悉以下8个汉字，按 <strong>空格键</strong> 开始。</p>
+      ${charTableHtml}
+    </div>
+  `,
+  choices: [' ']
+});
+
+// ---------- 6. 朗读任务 ----------
+const readingTrials = generateReadingTrials();
+readingTrials.forEach(trial => timeline.push(trial));
+
+// 朗读任务结束 → 模仿任务过渡
+timeline.push({
+  type: jsPsychHtmlButtonResponse,
+  stimulus: `
+    <div class="instruction">
+      <h3>朗读任务完成！</h3>
+      <p>接下来进入模仿任务。</p>
+    </div>
+  `,
+  choices: ['继续'],
+  button_html: '<button class="jspsych-btn btn-blue">%choice%</button>'
+});
+
+// ---------- 7. 模仿任务 ----------
+timeline.push({
+  type: jsPsychHtmlButtonResponse,
+  stimulus: `
+    <div class="instruction">
+      <h3>模仿任务</h3>
+      <p>接下来是模仿任务。</p>
+      <p>流程：听音频 → 在3秒内模仿发音</p>
+      <p>点击"开始"进入该任务。</p>
+    </div>
+  `,
+  choices: ['开始'],
+  button_html: '<button class="jspsych-btn btn-blue">%choice%</button>'
+});
+
+const imitationTrials = generateImitationTrials();
+imitationTrials.forEach(trial => timeline.push(trial));
+
+// ---------- 8. 实验结束 ----------
+timeline.push({
+  type: jsPsychHtmlButtonResponse,
+  stimulus: `
+    <div class="instruction">
+      <h2>实验结束，感谢您的参与！</h2>
+      <p>所有数据已自动下载到您的电脑。</p>
+      <p><strong>请检查下载文件夹，确认以下文件都已保存：</strong></p>
+      <ul>
+        <li>1 个 .json 文件（行为数据）</li>
+        <li>64 个 .webm 文件（朗读任务录音）</li>
+        <li>67 个 .webm 文件（1个练习 + 66个模仿任务录音）</li>
+      </ul>
+      <p>请将所有文件打包发送给实验员。</p>
+    </div>
+  `,
+  choices: ['结束实验'],
+  button_html: '<button class="jspsych-btn btn-blue">%choice%</button>',
+  on_finish: function() {
+    saveData();
+  }
+});
+
+// ==================== 启动实验 ====================
+
+jsPsych.run(timeline);
+
+</script>
+>>>>>>> Stashed changes
 </html>
